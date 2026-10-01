@@ -1,0 +1,53 @@
+name: Zip Dosyasini Ac ve mrendlesscr Olarak Derle
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Kodlari Cek
+      uses: actions/checkout@v4
+
+    - name: Java 17 Kur
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Depodaki Zip Dosyasını Bul ve İçini Tamamen Aç
+      run: |
+        # Eğer ana dizinde herhangi bir zip dosyası varsa içini buraya çıkartır
+        if ls *.zip 1> /dev/null 2>&1; then
+          echo "Zip dosyasi bulundu, icerik cikartiliyor..."
+          unzip -o *.zip
+          rm *.zip # Orijinal zip dosyasını siler
+        else
+          echo "Ana dizinde herhangi bir zip dosyasi bulunamadi!"
+        fi
+
+    - name: Gradle Yetkisi Ver
+      run: chmod +x gradlew
+
+    - name: Modu Paketle (Jar Olustur)
+      run: ./gradlew build
+
+    - name: Benzersiz Versiyon Etiketi Olustur
+      id: tag
+      run: echo "TAG_NAME=v1.0.0-${{ github.run_number }}" >> $GITHUB_ENV
+
+    - name: Sikistirmadan Direkt Ham Jar Dosyasini Yayinla
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ env.TAG_NAME }}
+        name: Mr. Endless Cursor Sürümü #${{ github.run_number }}
+        draft: false
+        prerelease: false
+        files: build/libs/*.jar
+        
